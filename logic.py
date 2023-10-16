@@ -65,6 +65,9 @@ class PreprintToMerritt:
             request.status = PreprintMerrittRequests.SubmissionStatus.SEND_ERROR
             request.save()
             raise
+        
+        # clear temp
+        ZipForPreprint.clearTmp()
         print("DONE")
 
 """
@@ -127,6 +130,9 @@ class ZipForPreprint:
         xmlname = f'{self.tmpfolder}/meta_{self.preprint.id}.xml'
         result = os.system("curl {} > {}".format(metadata_url, xmlname))
         assert(result == 0)
+
+    def clearTmp():
+        os.system(f'rm -r {django_settings.MERRITT_TMP}/*')
     
 
 """

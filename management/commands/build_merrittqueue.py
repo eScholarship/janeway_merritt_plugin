@@ -9,7 +9,7 @@ from utils.logger import get_logger
 from django.utils import timezone
 
 
-BATCH_SIZE = 30 
+BATCH_SIZE = 100 
 logger = get_logger(__name__)
 
 class Command(BaseCommand):
