@@ -34,7 +34,9 @@ def merritt_callback(request, job_id):
     logger.info(request)
     print("callback called for job"  + str(job_id))
     if request.method == "POST":
-        data = json.loads(request.body)
+        body = request.body.decode('latin-1')
+        logger.info(body)
+        data = json.loads(body)
         # make sure the job id in the body of the post is same as in the callback url
         if data['job:jobState']['job:jobID'] == job_id:
             process_callback(data)

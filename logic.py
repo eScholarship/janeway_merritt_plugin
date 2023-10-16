@@ -9,6 +9,7 @@ __maintainer__ = "California Digital Library"
 
 
 import os
+import re
 import subprocess
 
 from utils.logger import get_logger
@@ -155,7 +156,7 @@ class MerrittForPreprint:
             param1 = f'{django_settings.MERRITT_USER}:{django_settings.MERRITT_KEY}',
             param2 = self.zipname,
             param3 = django_settings.MERRITT_USER,
-            param4 = self.preprint.title,
+            param4 = re.sub(r'[^a-zA-Z0-9 ]', '', self.preprint.title), 
             param5 = self.getCreators(),
             param6 = self.collection,
             param7 = self.preprint.id,
