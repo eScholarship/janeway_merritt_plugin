@@ -134,7 +134,7 @@ Send zip to Merritt
 """
 class MerrittForPreprint:
     # get merritt user name, password and url from settings
-    merritt_base = 'curl -u {param1} -F "file=@{param2}" -F "type=container" -F "submitter={param3}" "title={param4}" --form-string "creator={param5}" -F "responseForm=xml" -F "profile={param6}" -F "localIdentifier={param7}" "{param8}"'
+    merritt_base = 'curl -u {creds} -F "file=@{zipfile}" -F "type=container" -F "submitter={merrittuser}" "title={title}" --form-string "creator={creator}" -F "responseForm=xml" -F "profile={collection}" -F "localIdentifier={localid}" "{url}"'
     preprint = None
     collection = None
     zipname = None
@@ -153,14 +153,14 @@ class MerrittForPreprint:
 
         # the zip file is in tmp folder
         merritt_command = self.merritt_base.format(
-            param1 = f'{django_settings.MERRITT_USER}:{django_settings.MERRITT_KEY}',
-            param2 = self.zipname,
-            param3 = django_settings.MERRITT_USER,
-            param4 = re.sub(r'[^a-zA-Z0-9 ]', '', self.preprint.title), 
-            param5 = self.getCreators(),
-            param6 = self.collection,
-            param7 = self.preprint.id,
-            param8 = django_settings.MERRITT_URL
+            creds = f'{django_settings.MERRITT_USER}:{django_settings.MERRITT_KEY}',
+            zipfile = self.zipname,
+            merrittuser = django_settings.MERRITT_USER,
+            title = re.sub(r'[^a-zA-Z0-9 ]', '', self.preprint.title), 
+            creator = self.getCreators(),
+            collection = self.collection,
+            localid = self.preprint.id,
+            url = django_settings.MERRITT_URL
             )
 
         # save this request
@@ -168,8 +168,8 @@ class MerrittForPreprint:
         self.request.request_detail = merritt_command
         self.request.save()
         output = subprocess.getoutput(merritt_command)
-        print("This is the output")
-        print(output)
+        #print("This is the output")
+        #print(output)
         self.request.response = output
         self.request.save()
         return output
