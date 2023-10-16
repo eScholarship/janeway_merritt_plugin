@@ -3,7 +3,7 @@ Janeway Management command for sending a preprint article and metadata to Merrit
 """
 
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from plugins.merritt.logic import PreprintToMerritt
 from repository import models
 from plugins.merritt.models import RepoMerrittSettings
@@ -45,13 +45,13 @@ class Command(BaseCommand):
             # get the preprint that matches the provided preprint_id
             preprint = models.Preprint.objects.get(pk=preprint_id)
         except models.Preprint.DoesNotExist:
-            exit('No preprint found with preprint_id=' + preprint_id)
+            raise CommandError('No preprint found with preprint_id=' + preprint_id)
 
         # get collection for this repo
         try:
             reposetting = RepoMerrittSettings.objects.get(repo=preprint.repository)
         except:
-            exit('Setting for repo with preprint not found preprint_id=' + preprint_id)
+            raise CommandError('Setting for repo with preprint not found preprint_id=' + preprint_id)
 
         p = PreprintToMerritt(preprint, reposetting) 
         p.process()
