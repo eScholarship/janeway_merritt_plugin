@@ -10,14 +10,15 @@ __maintainer__ = "California Digital Library"
 
 import os
 import re
-import subprocess
-
+import shutil
+import requests
 from utils.logger import get_logger
 from django.utils import timezone
 
 from .models import PreprintMerrittRequests, MerrittQueue
 from django.conf import settings as django_settings
 from pathlib import Path
+from zipfile import ZipFile
 
 logger = get_logger(__name__)
 
@@ -77,9 +78,7 @@ class ZipForPreprint:
     preprint = None
     repo = None
     tmpfolder = None
-    metadata_urlbase = '"https://{param1}/api/oai/?verb=GetRecord&identifier=oai:{param2}:id:{param3}&metadataprefix=oai_dc"'
     filepath_base = "/apps/eschol/janeway/src/files/"
-
     def __init__(self, ppobj, repoobj):
         print("creating zip for preprint")
         self.preprint = ppobj
@@ -90,57 +89,54 @@ class ZipForPreprint:
         # create temp folder if needed
         self.tmpfolder = django_settings.MERRITT_TMP + str(self.preprint.id)
         zipfile = f'{django_settings.MERRITT_TMP}{self.preprint.id}.zip'
-        print(self.tmpfolder)
-        # create folder if needed
-        os.system(f'mkdir -p {self.tmpfolder}')
+        if not os.path.exists(django_settings.MERRITT_TMP):
+            os.mkdir(django_settings.MERRITT_TMP)
+
         # empty the folder if needed
-        os.system(f'rm {self.tmpfolder}/*')
+        if os.path.exists(self.tmpfolder):
+            shutil.rmtree(self.tmpfolder)
+        os.mkdir(self.tmpfolder)
 
         # copy files temp folder
-        self.copyArticle()
-        self.generateMetadata()
+        articlepath = self.copyArticle()
+        metadatapath = self.generateMetadata()
 
         # generate zip file  
-        zipcommand = f'zip -r {zipfile} {self.tmpfolder}/'
-        print(zipcommand)
-        result = os.system(zipcommand)
-        assert(result == 0)
+        with ZipFile(zipfile, 'w') as zip_object:
+            zip_object.write(articlepath)
+            zip_object.write(metadatapath)
+        assert(os.path.exists(zipfile))
         return zipfile
 
     def copyArticle(self):
         print("copy article file")
-        print(self.preprint.title)
-        print(self.preprint.submission_file.file)
         fullpath = self.filepath_base + str(self.preprint.submission_file.file)
         temppath = self.tmpfolder + '/' + Path(fullpath).name
-        print("copy from " + fullpath)
-        print("copy to " + temppath)
-        result = os.system("cp {} {}".format(fullpath, temppath))
-        assert(result == 0)
+        shutil.copy(fullpath, temppath)
+        return temppath
 
     def generateMetadata(self):
         print("generate meta data")
-        print(self.repo.short_name)
-
-        # get url from repo
-        metadata_url = self.metadata_urlbase.format(param1=self.repo.domain, param2= self.repo.short_name, param3=self.preprint.id)
-        print(metadata_url)
-
+        params = {
+            'verb': 'GetRecord',
+            'identifier': f'oai:{self.repo.short_name}:id:{self.preprint.id}',
+            'metadataPrefix': 'jats'
+        }
+        response = requests.get(f'https://{self.repo.domain}/api/oai', params=params)
         # save the metadata in temp folder
         xmlname = f'{self.tmpfolder}/meta_{self.preprint.id}.xml'
-        result = os.system("curl {} > {}".format(metadata_url, xmlname))
-        assert(result == 0)
+        with open(xmlname, "a") as f:
+            f.write(response.text)
+        return xmlname
 
     def clearTmp():
-        os.system(f'rm -r {django_settings.MERRITT_TMP}/*')
+        shutil.rmtree(django_settings.MERRITT_TMP)
     
 
 """
 Send zip to Merritt
 """
 class MerrittForPreprint:
-    # get merritt user name, password and url from settings
-    merritt_base = 'curl -u {creds} -F "file=@{zipfile}" -F "type=container" -F "submitter={merrittuser}" "title={title}" --form-string "creator={creator}" -F "responseForm=xml" -F "profile={collection}" -F "localIdentifier={localid}" "{url}"'
     preprint = None
     collection = None
     zipname = None
@@ -155,30 +151,27 @@ class MerrittForPreprint:
 
 
     def sendRequest(self):
-        print("create curl request and send update")
-
-        # the zip file is in tmp folder
-        merritt_command = self.merritt_base.format(
-            creds = f'{django_settings.MERRITT_USER}:{django_settings.MERRITT_KEY}',
-            zipfile = self.zipname,
-            merrittuser = django_settings.MERRITT_USER,
-            title = re.sub(r'[^a-zA-Z0-9 ]', '', self.preprint.title), 
-            creator = self.getCreators(),
-            collection = self.collection,
-            localid = self.preprint.id,
-            url = django_settings.MERRITT_URL
-            )
-
-        # save this request
-        print(merritt_command)
-        self.request.request_detail = merritt_command
+        print("create request and send Merritt update")
+        files = {
+            'file': open(self.zipname, 'rb'),
+            'type': (None, 'container'),
+            'submitter': (None, django_settings.MERRITT_USER),
+            'title': (None, re.sub(r'[^a-zA-Z0-9 ]', '', self.preprint.title)), 
+            'date':(None, str(self.preprint.date_published)),
+            'creator': (None, self.getCreators()),
+            'responseForm': (None, 'xml'),
+            'profile': (None, self.collection),
+            'localIdentifier': (None, self.preprint.id),
+        }
+        # save the request info
+        self.request.request_detail = str(files)
         self.request.save()
-        output = subprocess.getoutput(merritt_command)
-        #print("This is the output")
-        #print(output)
-        self.request.response = output
+        # send request
+        response = requests.post(django_settings.MERRITT_URL, files=files, auth=(django_settings.MERRITT_USER, django_settings.MERRITT_KEY))
+        # save response
+        self.request.response = response.text
         self.request.save()
-        return output
+        return
 
     def extractIDs(self, output):
         print("extracting ids")
