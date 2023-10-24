@@ -24,7 +24,7 @@ class PreprintMerrittRequests(models.Model):
         DONE =  'D', _('Callback with success received')
         ERROR =  'E', _('Callback with failure received')
 
-    preprint = models.ForeignKey(Preprint, on_delete=models.CASCADE)
+    preprint = models.ForeignKey(Preprint, on_delete=models.SET_NULL, null=True)
     request_date = models.DateTimeField()
     request_detail = models.CharField(max_length=3000, null=True)
     response = models.CharField(max_length=3000, null=True)
@@ -39,7 +39,7 @@ class MerrittJobStatus(models.Model):
         ERROR = 'E', _('Job failed')
 
     job_id = models.CharField(max_length=100, primary_key=True)
-    preprint = models.ForeignKey(Preprint, on_delete=models.CASCADE)
+    preprint = models.ForeignKey(Preprint, on_delete=models.SET_NULL, null=True)
     callback_date = models.DateTimeField()
     callback_response = models.CharField(max_length=3000)
     status = models.CharField(max_length=1, choices=JobStatus.choices, default=JobStatus.ERROR)
