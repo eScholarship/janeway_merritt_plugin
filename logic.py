@@ -40,6 +40,7 @@ class PreprintToMerritt:
          # create a PreprintMerrittRequests to keep all the information related to curl request to Merritt
         request = PreprintMerrittRequests(preprint = self.preprint, request_date=timezone.now())
         request.save()
+
         # update entry in MerrittQueue for the preprint
         qitem = MerrittQueue.objects.get_or_create(preprint = self.preprint, defaults={'queue_date':timezone.now() })[0]
         qitem.status = MerrittQueue.ItemStatus.PROCESSING
@@ -110,7 +111,7 @@ class ZipForPreprint:
 
     def copyArticle(self):
         print("copy article file")
-        fullpath = self.filepath_base + str(self.preprint.submission_file.file)
+        fullpath = self.filepath_base + str(self.preprint.current_version.file.file)
         temppath = self.tmpfolder + '/' + Path(fullpath).name
         shutil.copy(fullpath, temppath)
         return temppath

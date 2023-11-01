@@ -35,6 +35,10 @@ class Command(BaseCommand):
                 rsetting.scan_date = scan_date
             rsetting.save()
 
+            # for the items with date_updated null check for all that have not been sent yet
+            pps = models.Preprint.objects.filter(repository = rsetting.repo, stage = 'preprint_published', date_updated__isnull=True).values_list('id', 'date_updated')
+            self.QueueItems(pps)
+
 
     def QueueItems(self, pps):
         scan_date = None
@@ -44,7 +48,7 @@ class Command(BaseCommand):
             # create or get queue item
             qitem = MerrittQueue.objects.get_or_create(preprint_id = preprint_id, defaults={'queue_date':timezone.now() })[0]
             # skip if this has been tried and not updated since then
-            if qitem.status == MerrittQueue.ItemStatus.WAITING or qitem.queue_date < date_updated: 
+            if qitem.status == MerrittQueue.ItemStatus.WAITING or (date_updated and qitem.queue_date < date_updated): 
                 qitem.status = MerrittQueue.ItemStatus.WAITING
                 qitem.queue_date = timezone.now()
                 qitem.completion_date = None
