@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('repository', '0036_alter_preprintversion_title'),
+        ('repository', '0035_alter_preprintaccess_options'),
     ]
 
     operations = [

@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('repository', '0036_alter_preprintversion_title'),
+        ('repository', '0035_alter_preprintaccess_options'),
         ('merritt', '0001_initial'),
     ]
 
