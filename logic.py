@@ -161,6 +161,7 @@ class MerrittForPreprint:
             'date':(None, str(self.preprint.date_published)),
             'creator': (None, self.getCreators()),
             'responseForm': (None, 'xml'),
+            'notificationFormat': (None, 'json'),
             'profile': (None, self.collection),
             'localIdentifier': (None, self.preprint.id),
         }
