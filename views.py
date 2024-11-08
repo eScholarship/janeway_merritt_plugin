@@ -55,7 +55,7 @@ def process_callback(data):
     job = MerrittJobStatus(job_id = job_id, callback_date = timezone.now(), callback_response = json.dumps(data), preprint_id=preprint_id)
     qitem = MerrittQueue.objects.get(preprint_id = preprint_id)
     ritem = PreprintMerrittRequests.objects.filter(preprint_id = preprint_id, status = PreprintMerrittRequests.SubmissionStatus.SENT).order_by('-request_date').first()
-    if "COMPLETED" in status:
+    if "COMPLETED" in status or "CONSUMED" in status:
         job.status = MerrittJobStatus.JobStatus.COMPLETED
         qitem.status = MerrittQueue.ItemStatus.COMPLETED
         ritem.status = PreprintMerrittRequests.SubmissionStatus.DONE
